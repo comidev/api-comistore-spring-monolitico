@@ -22,9 +22,15 @@ import org.springframework.web.bind.annotation.RestController;
 import comidev.comistore.components.customer.dto.CustomerReq;
 import comidev.comistore.components.customer.dto.CustomerRes;
 import comidev.comistore.components.customer.dto.CustomerUpdate;
-import comidev.comistore.utils.EmailBody;
+import comidev.comistore.components.customer.dto.EmailBody;
 import comidev.comistore.utils.Validator;
 import lombok.AllArgsConstructor;
+
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
 
 @RestController
 @RequestMapping("/customers")
@@ -32,6 +38,11 @@ import lombok.AllArgsConstructor;
 public class CustomerController {
     private final CustomerService customerService;
 
+    @Operation(summary = "findAll - Devuelve lista de clientes", responses = {
+            @ApiResponse(responseCode = "200", description = "OK", content = @Content(mediaType = "application/json", schema = @Schema(implementation = CustomerRes.class))),
+            @ApiResponse(responseCode = "204", description = "NO CONTENT - No hay clientes", content = @Content),
+            @ApiResponse(responseCode = "401", description = "UNAUTHORIZED - Se requiere Token con Rol(es): ADMIN", content = @Content),
+    }, security = @SecurityRequirement(name = "bearer-key"))
     @GetMapping
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<List<CustomerRes>> findAll() {
@@ -43,6 +54,11 @@ public class CustomerController {
                 .body(customers);
     }
 
+    @Operation(summary = "findById - Devuelve cliente por id", responses = {
+            @ApiResponse(responseCode = "200", description = "OK", content = @Content(mediaType = "application/json", schema = @Schema(implementation = CustomerRes.class))),
+            @ApiResponse(responseCode = "404", description = "NOT FOUND - No se encuentra el Cliente", content = @Content),
+            @ApiResponse(responseCode = "401", description = "UNAUTHORIZED - Se requiere Token con Rol(es): CLIENTE", content = @Content),
+    }, security = @SecurityRequirement(name = "bearer-key"))
     @GetMapping("/{id}")
     @PreAuthorize("hasRole('CLIENTE')")
     @ResponseStatus(HttpStatus.OK)
@@ -53,17 +69,29 @@ public class CustomerController {
         return customer;
     }
 
+    @Operation(summary = "save - Registra un cliente", responses = {
+            @ApiResponse(responseCode = "201", description = "CREATED - Se registra el cliente", content = @Content(mediaType = "application/json", schema = @Schema(implementation = CustomerRes.class))),
+            @ApiResponse(responseCode = "409", description = "CONFLICT - El email ya existe", content = @Content),
+            @ApiResponse(responseCode = "404", description = "NOT FOUND - El pais no existe", content = @Content),
+            @ApiResponse(responseCode = "400", description = "BAD REQUEST - Error de validacion", content = @Content),
+    })
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     @ResponseBody
-    public CustomerRes save(@Valid @RequestBody CustomerReq customerReq,
-            BindingResult bindingResult) {
+    public CustomerRes save(@Valid @RequestBody CustomerReq customerReq, BindingResult bindingResult) {
         Validator.checkOrThrowBadRequest(bindingResult);
 
         CustomerRes customer = customerService.save(customerReq);
         return customer;
     }
 
+    @Operation(summary = "update - Actualiza cliente por id", responses = {
+            @ApiResponse(responseCode = "200", description = "OK - Se actualiza el cliente", content = @Content(mediaType = "application/json", schema = @Schema(implementation = CustomerRes.class))),
+            @ApiResponse(responseCode = "400", description = "BAD REQUEST - Error de validacion", content = @Content),
+            @ApiResponse(responseCode = "404", description = "NOT FOUND - El clienteId o pais no existe", content = @Content),
+            @ApiResponse(responseCode = "409", description = "CONFLICT - El email o username ya existe", content = @Content),
+            @ApiResponse(responseCode = "401", description = "UNAUTHORIZED - Se requiere Token con Rol(es): CLIENTE", content = @Content),
+    }, security = @SecurityRequirement(name = "bearer-key"))
     @PutMapping("/{id}")
     @PreAuthorize("hasRole('CLIENTE')")
     @ResponseStatus(HttpStatus.OK)
@@ -76,6 +104,11 @@ public class CustomerController {
         return customer;
     }
 
+    @Operation(summary = "deleteById - elimina cliente por id", responses = {
+            @ApiResponse(responseCode = "200", description = "OK - Se elimina el cliente", content = @Content),
+            @ApiResponse(responseCode = "404", description = "NOT FOUND - El clienteId no existe", content = @Content),
+            @ApiResponse(responseCode = "401", description = "UNAUTHORIZED - Se requiere Token con Rol(es): CLIENTE", content = @Content),
+    }, security = @SecurityRequirement(name = "bearer-key"))
     @DeleteMapping("/{id}")
     @PreAuthorize("hasRole('CLIENTE')")
     @ResponseStatus(HttpStatus.OK)
@@ -83,6 +116,11 @@ public class CustomerController {
         customerService.deleteById(id);
     }
 
+    @Operation(summary = "existsEmail - verifica si el email ya está registrado", responses = {
+            @ApiResponse(responseCode = "200", description = "OK - Se actualiza el cliente", content = @Content),
+            @ApiResponse(responseCode = "400", description = "BAD REQUEST - Error de validacion", content = @Content),
+            @ApiResponse(responseCode = "404", description = "NOT FOUND - El email no existe", content = @Content),
+    })
     @PostMapping("/email")
     @ResponseStatus(HttpStatus.OK)
     public void existsEmail(@Valid @RequestBody EmailBody email, BindingResult bindingResult) {

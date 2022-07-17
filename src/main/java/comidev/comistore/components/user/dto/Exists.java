@@ -1,4 +1,4 @@
-package comidev.comistore.utils;
+package comidev.comistore.components.user.dto;
 
 import lombok.AllArgsConstructor;
 import lombok.Getter;

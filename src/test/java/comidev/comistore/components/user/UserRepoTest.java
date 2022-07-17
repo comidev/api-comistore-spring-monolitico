@@ -15,9 +15,9 @@ public class UserRepoTest {
     @Autowired
     private UserRepo userRepo;
 
-    // (*) existsByUsername
+    // * existsByUsername
     @Test
-    void FALSE_CuandoExisteElUserame_existsByUsername() {
+    void FALSE_CuandoNoExisteElUserame_existsByUsername() {
         String username = "comidev";
 
         boolean response = userRepo.existsByUsername(username);
@@ -35,7 +35,7 @@ public class UserRepoTest {
         assertTrue(response);
     }
 
-    // (*) findByUsername
+    // * findByUsername
     @Test
     void IS_EMPTY_CuandoNoExisteElUsuario_findByUsername() {
         String username = "comidev";

@@ -24,12 +24,23 @@ import comidev.comistore.components.product.dto.ProductSearch;
 import comidev.comistore.utils.Validator;
 import lombok.AllArgsConstructor;
 
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
+
 @RestController
 @RequestMapping("/products")
 @AllArgsConstructor
 public class ProductController {
     private final ProductService productService;
 
+    @Operation(summary = "findAllOrFields - Devuelve lista de productos, por nombre y/o categoria", responses = {
+            @ApiResponse(responseCode = "200", description = "OK", content = @Content(mediaType = "application/json", schema = @Schema(implementation = ProductRes.class))),
+            @ApiResponse(responseCode = "204", description = "NO CONTENT - No hay productos", content = @Content),
+            @ApiResponse(responseCode = "404", description = "NOT FOUND - La categoria no existe", content = @Content),
+    })
     @GetMapping
     public ResponseEntity<List<ProductRes>> findAllOrFields(
             @RequestParam(name = "name", required = false) String name,
@@ -41,6 +52,10 @@ public class ProductController {
         return ResponseEntity.status(products.isEmpty() ? 204 : 200).body(products);
     }
 
+    @Operation(summary = "findById - Devuelve producto por id", responses = {
+            @ApiResponse(responseCode = "200", description = "OK", content = @Content(mediaType = "application/json", schema = @Schema(implementation = ProductRes.class))),
+            @ApiResponse(responseCode = "404", description = "NOT FOUND - No se encuentra el producto", content = @Content),
+    })
     @GetMapping("/{id}")
     @ResponseStatus(HttpStatus.OK)
     @ResponseBody
@@ -51,6 +66,12 @@ public class ProductController {
         return product;
     }
 
+    @Operation(summary = "save - Registra un producto", responses = {
+            @ApiResponse(responseCode = "201", description = "CREATED - Se registra el producto", content = @Content(mediaType = "application/json", schema = @Schema(implementation = ProductRes.class))),
+            @ApiResponse(responseCode = "404", description = "NOT FOUND - La categoria no existe", content = @Content),
+            @ApiResponse(responseCode = "400", description = "BAD REQUEST - Error de validacion", content = @Content),
+            @ApiResponse(responseCode = "401", description = "UNAUTHORIZED - Se requiere Token con Rol(es): ADMIN", content = @Content),
+    }, security = @SecurityRequirement(name = "bearer-key"))
     @PostMapping
     @PreAuthorize("hasRole('ADMIN')")
     @ResponseStatus(HttpStatus.CREATED)

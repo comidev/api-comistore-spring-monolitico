@@ -1,4 +1,4 @@
-package comidev.comistore.utils;
+package comidev.comistore.components.customer.dto;
 
 import javax.validation.constraints.Email;
 import javax.validation.constraints.NotEmpty;

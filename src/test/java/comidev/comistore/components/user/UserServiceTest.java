@@ -9,7 +9,6 @@ import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-// import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.HttpStatus;
@@ -47,60 +46,70 @@ public class UserServiceTest {
         roleRepo.save(new Role(RoleName.ADMIN));
     }
 
+    // * findAll
     @Test
     void testFindAll_puedeDevolverLosUsuarios() {
-        when(userRepo.findAll()).thenReturn(List.of(new User("comidev", "123")));
+        String username = "comidev";
+        User user = new User();
+        user.setUsername(username);
+        when(userRepo.findAll()).thenReturn(List.of(user));
 
         List<UserRes> users = userService.findAll();
 
         verify(userRepo).findAll();
-        assertEquals(new UserRes("comidev"), users.get(0));
+        assertEquals(user.getUsername(), users.get(0).getUsername());
     }
 
+    // * saveAdmin
     @Test
     void testSaveAdmin_puedeGuardarUnUsuarioAdmin() {
         // Arreglar
-        String password = "password";
-        User userDB = new User("username", password);
+        UserReq userReq = new UserReq();
+
+        User userDB = new User(userReq.getUsername(), userReq.getPassword());
         Role roleDB = new Role();
         userDB.getRoles().add(roleDB);
-        when(bcrypt.encode(password)).thenReturn(password);
+
+        when(userRepo.existsByUsername(userReq.getUsername())).thenReturn(false);
+        when(bcrypt.encode(userReq.getPassword())).thenReturn(userReq.getPassword());
         when(roleRepo.findByName(RoleName.ADMIN)).thenReturn(roleDB);
         when(userRepo.save(userDB)).thenReturn(userDB);
 
         // Actuar
-        UserReq userReq = new UserReq("username", password);
         userService.saveAdmin(userReq);
 
         // Afirmar
-        verify(bcrypt).encode(password);
+        verify(userRepo).existsByUsername(userReq.getUsername());
+        verify(bcrypt).encode(userReq.getPassword());
+        verify(roleRepo).findByName(RoleName.ADMIN);
         verify(userRepo).save(userDB);
     }
 
     @Test
     void testSaveAdmin_throwHttpExceptionSiExisteElUsername() {
         // Arreglar
-        String username = "username";
-        when(userRepo.existsByUsername(username)).thenReturn(true);
+        UserReq userReq = new UserReq();
+
+        when(userRepo.existsByUsername(userReq.getUsername())).thenReturn(true);
 
         // Actuar
-        UserReq userReq = new UserReq(username, "password");
-
-        // Afirmar
         HttpStatus status = assertThrows(HttpException.class, () -> {
             userService.saveAdmin(userReq);
         }).getStatus();
+
+        // Afirmar
         assertEquals(HttpStatus.CONFLICT, status);
-        verify(userRepo).existsByUsername(username);
+        verify(userRepo).existsByUsername(userReq.getUsername());
         verify(bcrypt, never()).encode(any());
         verify(roleRepo, never()).findByName(any());
         verify(userRepo, never()).save(any());
     }
-
+    // * existsUsername
     @Test
     void testExistsUsername_PuedeVerificarSiExisteElUsuario() {
         // Arreglar
         String username = "username";
+
         when(userRepo.existsByUsername(username)).thenReturn(true);
 
         // Actuar
@@ -111,15 +120,17 @@ public class UserServiceTest {
         verify(userRepo).existsByUsername(username);
     }
 
+    // * updatePassword
     @Test
     void testUpdatePassword_PuedeActualizarElPassword() {
         // Arreglar
         Long id = 1l;
         Passwords passwords = new Passwords("nuevo", "actual");
         User userDB = new User("username", passwords.getCurrentPassword());
+
         when(userRepo.findById(id)).thenReturn(Optional.of(userDB));
-        when(bcrypt.matches(passwords.getCurrentPassword(), passwords.getCurrentPassword()))
-                .thenReturn(true);
+        when(bcrypt.matches(passwords.getCurrentPassword(), userDB.getPassword()))
+            .thenReturn(true);
 
         // Actuar
         boolean response = userService.updatePassword(id, passwords);
@@ -127,7 +138,8 @@ public class UserServiceTest {
         // Afirmar
         assertTrue(response);
         verify(userRepo).findById(id);
-        verify(bcrypt).matches(passwords.getCurrentPassword(), passwords.getCurrentPassword());
+        verify(bcrypt)
+        .matches(passwords.getCurrentPassword(), passwords.getCurrentPassword());
         verify(userRepo).save(userDB);
     }
 
@@ -170,6 +182,7 @@ public class UserServiceTest {
         verify(userRepo, never()).save(any());
     }
 
+    // * login
     @Test
     void testLogin_PuedeLoguearse() {
         // Arreglar
@@ -242,6 +255,7 @@ public class UserServiceTest {
         verify(jwtService, never()).createTokens(any());
     }
 
+    // * tokenRefresh
     @Test
     void testTokenRefresh_PuedeDarmeNuevosTokens() {
         // Arreglar
@@ -260,6 +274,7 @@ public class UserServiceTest {
         verify(jwtService).createTokens(payload);
     }
 
+    // * tokenValidate
     @Test
     void testTokenValidate_PuedeValidar() {
         // Arreglar

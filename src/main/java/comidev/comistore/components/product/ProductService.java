@@ -20,14 +20,6 @@ public class ProductService {
     private final ProductRepo productRepo;
     private final CategoryRepo categoryRepo;
 
-    private Category findCategoryByName(String name) {
-        return categoryRepo.findByName(name)
-                .orElseThrow(() -> {
-                    String message = "La categoria no existe!";
-                    return new HttpException(HttpStatus.NOT_FOUND, message);
-                });
-    }
-
     public List<ProductRes> findAllOrFields(ProductSearch productSearch) {
         String categorySearch = productSearch.getCategory();
         String name = productSearch.getName();
@@ -53,6 +45,14 @@ public class ProductService {
         }
 
         return productsDB.stream().map(ProductRes::new).toList();
+    }
+
+    private Category findCategoryByName(String name) {
+        return categoryRepo.findByName(name)
+                .orElseThrow(() -> {
+                    String message = "La categoria no existe!";
+                    return new HttpException(HttpStatus.NOT_FOUND, message);
+                });
     }
 
     public ProductRes findById(Long id) {

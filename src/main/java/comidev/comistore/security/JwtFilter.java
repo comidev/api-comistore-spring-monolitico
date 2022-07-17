@@ -11,8 +11,6 @@ import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.util.List;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -31,7 +29,6 @@ import comidev.comistore.services.jwt.Payload;
 
 public class JwtFilter extends OncePerRequestFilter {
     private JwtService jwtService;
-    private final Logger LOGGER = LoggerFactory.getLogger(JwtFilter.class);
 
     public JwtFilter() {
         this.jwtService = new JwtService();
@@ -40,26 +37,21 @@ public class JwtFilter extends OncePerRequestFilter {
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain chain)
             throws ServletException, IOException {
-        LOGGER.info("Pasó por aqui");
+
         String bearerToken = request.getHeader(HttpHeaders.AUTHORIZATION);
+
         if (!jwtService.isBearer(bearerToken)) {
             chain.doFilter(request, response);
-            LOGGER.info("No hay token uwu");
             return;
         }
 
         try {
-            LOGGER.info("Iniciando la payloadizacion :v");
             Payload payload = jwtService.verify(bearerToken);
 
             List<SimpleGrantedAuthority> authorities = payload.getRoles().stream()
                     .map(item -> "ROLE_" + item)
                     .map(SimpleGrantedAuthority::new)
                     .toList();
-
-            System.out.println("\n\n\t");
-            authorities.forEach(item -> System.out.println(item.getAuthority()));
-            System.out.println("\n\n");
 
             Authentication auth = new UsernamePasswordAuthenticationToken(
                     payload.getUsername(),

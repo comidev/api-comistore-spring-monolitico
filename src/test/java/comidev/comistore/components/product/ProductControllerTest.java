@@ -1,6 +1,5 @@
 package comidev.comistore.components.product;
 
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
@@ -28,19 +27,8 @@ public class ProductControllerTest {
     @Autowired
     private Json json;
 
-    @BeforeEach
-    void beforeEach() {
-        fabric.getProductRepo().deleteAll();
-    }
 
     // * GET, /products
-    @Test
-    void NO_CONTENT_CuandoNoHayProductos_findAllOrFields() throws Exception {
-        ResultActions res = mockMvc.perform(get("/products"));
-
-        res.andExpect(status().isNoContent());
-    }
-
     @Test
     void OK_CuandoHayAlMenosUnProducto_findAllOrFields() throws Exception {
         fabric.createProduct(null);
@@ -146,7 +134,6 @@ public class ProductControllerTest {
     @Test
     void CREATED_CuandoTodoEsCorrecto_save() throws Exception {
         String authorization = fabric.createToken("ADMIN");
-        fabric.getCategoryRepo().deleteAll();
         String category = "Tecnologia";
         fabric.createCategory(category);
         ProductReq productReq = new ProductReq("name", "photoUrl",

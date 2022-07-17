@@ -1,5 +1,6 @@
 package comidev.comistore.components.user.dto;
 
+import comidev.comistore.components.user.User;
 import lombok.Getter;
 
 @Getter
@@ -9,8 +10,8 @@ public class UserRes {
     public UserRes() {
     }
 
-    public UserRes(String username) {
-        this.username = username;
+    public UserRes(User user) {
+        this.username = user.getUsername();
     }
 
     @Override

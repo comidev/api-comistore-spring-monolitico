@@ -13,6 +13,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 import static org.junit.jupiter.api.Assertions.*;
 
+import comidev.comistore.components.user.dto.Exists;
 import comidev.comistore.components.user.dto.Passwords;
 import comidev.comistore.components.user.dto.UserReq;
 import comidev.comistore.components.user.dto.UserRes;
@@ -21,7 +22,6 @@ import comidev.comistore.config.ApiIntegrationTest;
 import comidev.comistore.services.AppFabric;
 import comidev.comistore.services.Json;
 import comidev.comistore.services.jwt.Tokens;
-import comidev.comistore.utils.Exists;
 import comidev.comistore.utils.Updated;
 
 @ApiIntegrationTest
@@ -54,7 +54,7 @@ public class UserControllerTest {
 
         response.andExpect(status().isOk());
         String body = response.andReturn().getResponse().getContentAsString();
-        String expected = json.toJson(List.of(new UserRes(userDB.getUsername())));
+        String expected = json.toJson(List.of(new UserRes(userDB)));
         assertEquals(expected, body);
     }
 
@@ -92,9 +92,6 @@ public class UserControllerTest {
                 .content(json.toJson(bodyReq)));
 
         response.andExpect(status().isCreated());
-        String bodyRes = response.andReturn().getResponse().getContentAsString();
-        String expected = json.toJson(new UserRes(bodyReq.getUsername()));
-        assertEquals(expected, bodyRes);
     }
 
     // * POST, /users/username

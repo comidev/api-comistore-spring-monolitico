@@ -41,7 +41,8 @@ public class InvoiceService {
         List<Invoice> invoicesDB = invoiceRepo.findByCustomer(customer);
 
         return invoicesDB.stream()
-                .map(InvoiceRes::new).toList();
+                .map(InvoiceRes::new)
+                .toList();
     }
 
     public void save(InvoiceReq invoiceReq) {

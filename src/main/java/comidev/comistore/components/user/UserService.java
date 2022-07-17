@@ -1,6 +1,7 @@
 package comidev.comistore.components.user;
 
 import java.util.List;
+import java.util.UUID;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
@@ -25,10 +26,6 @@ public class UserService {
     private final JwtService jwtService;
     private final BCryptPasswordEncoder bcrypt;
 
-    private UserRes adapterUserRes(User item) {
-        return new UserRes(item.getUsername());
-    }
-
     private User save(UserReq userReq, RoleName roleName) {
         boolean existsUsername = userRepo.existsByUsername(userReq.getUsername());
         if (existsUsername) {
@@ -43,12 +40,13 @@ public class UserService {
     }
 
     public List<UserRes> findAll() {
-        List<User> usersDB = userRepo.findAll();
-        return usersDB.stream().map(this::adapterUserRes).toList();
+        return userRepo.findAll().stream()
+                .map(UserRes::new)
+                .toList();
     }
 
     public UserRes saveAdmin(UserReq userReq) {
-        return adapterUserRes(save(userReq, RoleName.ADMIN));
+        return new UserRes(save(userReq, RoleName.ADMIN));
     }
 
     public User saveCliente(UserReq userReq) {
@@ -107,6 +105,13 @@ public class UserService {
                 roles));
     }
 
+    public Tokens tokenGenerate(String roleName) {
+        Long id = (long) (Math.random() * 1000);
+        String username = "Test Swagger: " + UUID.randomUUID().toString();
+        List<String> roles = List.of(roleName);
+        return jwtService.createTokens(new Payload(id, username, roles));
+    }
+
     public Tokens tokenRefresh(String bearerToken) {
         Payload payload = jwtService.verify(bearerToken);
         return jwtService.createTokens(payload);
@@ -123,5 +128,6 @@ public class UserService {
         }
         User userDB = findByUsername(usernamePrev);
         userDB.setUsername(usernameNew);
+        userRepo.save(userDB);
     }
 }

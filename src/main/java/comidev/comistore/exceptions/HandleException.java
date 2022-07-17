@@ -4,6 +4,8 @@ import java.util.List;
 
 import javax.servlet.http.HttpServletRequest;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ControllerAdvice;
@@ -11,6 +13,9 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 
 @ControllerAdvice
 public class HandleException {
+
+    private final static Logger LOGGER = LoggerFactory.getLogger(HandleException.class);
+
     // * Error del Cliente
     @ExceptionHandler(HttpException.class)
     public ResponseEntity<ErrorMessage> generalError(HttpServletRequest request, HttpException exception) {
@@ -36,7 +41,7 @@ public class HandleException {
             return HttpStatus.UNAUTHORIZED;
         } else {
             exception.printStackTrace();
-            System.out.println("\n\t\t\tTipo de Excepcion:\n\t\t\t" + exceptionType + "\n");
+            LOGGER.error("Internal Server Error -> Tipo de Excepcion: {}", exceptionType);
             return HttpStatus.INTERNAL_SERVER_ERROR;
         }
     }

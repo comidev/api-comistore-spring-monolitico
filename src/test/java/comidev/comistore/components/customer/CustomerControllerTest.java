@@ -17,13 +17,13 @@ import java.time.LocalDate;
 import comidev.comistore.components.customer.dto.CustomerReq;
 import comidev.comistore.components.customer.dto.CustomerRes;
 import comidev.comistore.components.customer.dto.CustomerUpdate;
+import comidev.comistore.components.customer.dto.EmailBody;
 import comidev.comistore.components.role.Role;
 import comidev.comistore.components.role.RoleName;
 import comidev.comistore.components.user.dto.UserReq;
 import comidev.comistore.config.ApiIntegrationTest;
 import comidev.comistore.services.AppFabric;
 import comidev.comistore.services.Json;
-import comidev.comistore.utils.EmailBody;
 
 @ApiIntegrationTest
 public class CustomerControllerTest {
