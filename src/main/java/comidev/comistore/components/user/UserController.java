@@ -21,12 +21,12 @@ import org.springframework.web.bind.annotation.RestController;
 
 import comidev.comistore.components.user.dto.Exists;
 import comidev.comistore.components.user.dto.Passwords;
+import comidev.comistore.components.user.dto.Updated;
 import comidev.comistore.components.user.dto.UserReq;
 import comidev.comistore.components.user.dto.UserRes;
 import comidev.comistore.components.user.dto.Username;
 import comidev.comistore.services.jwt.Tokens;
-import comidev.comistore.utils.Validator;
-import comidev.comistore.utils.Updated;
+import comidev.comistore.services.validator.Validator;
 import lombok.AllArgsConstructor;
 
 import io.swagger.v3.oas.annotations.Operation;

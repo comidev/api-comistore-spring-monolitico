@@ -75,4 +75,14 @@ public class ProductService {
         return new ProductRes(productRepo.save(productNew));
     }
 
+    public Product updateStock(Long id, Integer stock) {
+        Product productDB = productRepo.findById(id)
+                .orElseThrow(() -> {
+                    String message = "El producto no existe!!";
+                    return new HttpException(HttpStatus.NOT_FOUND, message);
+                });
+        Integer stockNEW = productDB.getStock() + stock;
+        productDB.setStock(stockNEW);
+        return productRepo.save(productDB);
+    }
 }

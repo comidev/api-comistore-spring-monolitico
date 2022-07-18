@@ -1,4 +1,4 @@
-package comidev.comistore.utils;
+package comidev.comistore.services.validator;
 
 import java.util.List;
 

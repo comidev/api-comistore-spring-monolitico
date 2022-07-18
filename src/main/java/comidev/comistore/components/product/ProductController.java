@@ -21,7 +21,7 @@ import org.springframework.web.bind.annotation.RestController;
 import comidev.comistore.components.product.dto.ProductReq;
 import comidev.comistore.components.product.dto.ProductRes;
 import comidev.comistore.components.product.dto.ProductSearch;
-import comidev.comistore.utils.Validator;
+import comidev.comistore.services.validator.Validator;
 import lombok.AllArgsConstructor;
 
 import io.swagger.v3.oas.annotations.Operation;

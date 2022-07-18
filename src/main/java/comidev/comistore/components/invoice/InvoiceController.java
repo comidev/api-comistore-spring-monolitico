@@ -18,7 +18,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import comidev.comistore.components.invoice.dto.InvoiceReq;
 import comidev.comistore.components.invoice.dto.InvoiceRes;
-import comidev.comistore.utils.Validator;
+import comidev.comistore.services.validator.Validator;
 import lombok.AllArgsConstructor;
 
 import io.swagger.v3.oas.annotations.Operation;

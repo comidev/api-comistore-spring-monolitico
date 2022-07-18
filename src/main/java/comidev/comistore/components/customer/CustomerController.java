@@ -23,7 +23,7 @@ import comidev.comistore.components.customer.dto.CustomerReq;
 import comidev.comistore.components.customer.dto.CustomerRes;
 import comidev.comistore.components.customer.dto.CustomerUpdate;
 import comidev.comistore.components.customer.dto.EmailBody;
-import comidev.comistore.utils.Validator;
+import comidev.comistore.services.validator.Validator;
 import lombok.AllArgsConstructor;
 
 import io.swagger.v3.oas.annotations.Operation;

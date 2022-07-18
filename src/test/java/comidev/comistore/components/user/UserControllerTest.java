@@ -15,6 +15,7 @@ import static org.junit.jupiter.api.Assertions.*;
 
 import comidev.comistore.components.user.dto.Exists;
 import comidev.comistore.components.user.dto.Passwords;
+import comidev.comistore.components.user.dto.Updated;
 import comidev.comistore.components.user.dto.UserReq;
 import comidev.comistore.components.user.dto.UserRes;
 import comidev.comistore.components.user.dto.Username;
@@ -22,7 +23,6 @@ import comidev.comistore.config.ApiIntegrationTest;
 import comidev.comistore.services.AppFabric;
 import comidev.comistore.services.Json;
 import comidev.comistore.services.jwt.Tokens;
-import comidev.comistore.utils.Updated;
 
 @ApiIntegrationTest
 public class UserControllerTest {
