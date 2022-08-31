@@ -13,8 +13,11 @@ import javax.persistence.OneToOne;
 import javax.persistence.Table;
 
 import comidev.comistore.components.country.Country;
-import comidev.comistore.components.customer.dto.CustomerReq;
+import comidev.comistore.components.customer.request.CustomerCreate;
+import comidev.comistore.components.customer.request.CustomerUpdate;
+import comidev.comistore.components.customer.util.Gender;
 import comidev.comistore.components.user.User;
+import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
@@ -24,6 +27,7 @@ import lombok.Setter;
 @Entity
 @Table(name = "customers")
 @NoArgsConstructor
+@AllArgsConstructor
 public class Customer {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -49,22 +53,22 @@ public class Customer {
         this.id = id;
     }
 
-    public Customer(String name, String email, Gender gender, Date dateOfBirth,
-            String photoUrl, User user, Country country) {
-        this.name = name;
-        this.email = email;
-        this.gender = gender;
-        this.dateOfBirth = dateOfBirth;
-        this.photoUrl = photoUrl;
+    public Customer(CustomerCreate dto, User user, Country country) {
+        this.name = dto.getName();
+        this.email = dto.getEmail();
+        this.gender = dto.getGender();
+        this.dateOfBirth = dto.getDateOfBirth();
+        this.photoUrl = dto.getPhotoUrl();
         this.user = user;
         this.country = country;
     }
 
-    public Customer(CustomerReq customerReq) {
-        this.name = customerReq.getName();
-        this.email = customerReq.getEmail();
-        this.gender = customerReq.getGender();
-        this.dateOfBirth = customerReq.getDateOfBirth();
-        this.photoUrl = customerReq.getPhotoUrl();
+    public void update(CustomerUpdate dto, Country country) {
+        this.name = dto.getName();
+        this.email = dto.getEmail();
+        this.gender = dto.getGender();
+        this.dateOfBirth = dto.getDateOfBirth();
+        this.photoUrl = dto.getPhotoUrl();
+        this.country = country;
     }
 }

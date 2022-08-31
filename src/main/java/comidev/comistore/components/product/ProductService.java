@@ -1,16 +1,18 @@
 package comidev.comistore.components.product;
 
 import java.util.List;
+import java.util.Set;
 import java.util.function.Predicate;
+import java.util.stream.Collectors;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 
 import comidev.comistore.components.category.Category;
-import comidev.comistore.components.category.CategoryRepo;
-import comidev.comistore.components.product.dto.ProductReq;
-import comidev.comistore.components.product.dto.ProductRes;
-import comidev.comistore.components.product.dto.ProductSearch;
+import comidev.comistore.components.category.CategoryService;
+import comidev.comistore.components.product.request.ProductCreate;
+import comidev.comistore.components.product.response.ProductDetails;
+import comidev.comistore.components.product.util.ProductSearch;
 import comidev.comistore.exceptions.HttpException;
 import lombok.AllArgsConstructor;
 
@@ -18,71 +20,55 @@ import lombok.AllArgsConstructor;
 @AllArgsConstructor
 public class ProductService {
     private final ProductRepo productRepo;
-    private final CategoryRepo categoryRepo;
+    private final CategoryService categoryService;
 
-    public List<ProductRes> findAllOrFields(ProductSearch productSearch) {
-        String categorySearch = productSearch.getCategory();
-        String name = productSearch.getName();
+    public List<ProductDetails> getAllProductsOrFields(ProductSearch search) {
+        String categorySearch = search.getCategory();
+        String name = search.getName();
 
         List<Product> productsDB = null;
 
         if (categorySearch != null) {
-            Category categoryDB = findCategoryByName(categorySearch);
-
+            Category categoryDB = categoryService.findCategoryByName(categorySearch);
             Predicate<Product> filter = name != null
                     ? p -> p.getCategories().contains(categoryDB)
                             && p.getName().contains(name)
                     : p -> p.getCategories().contains(categoryDB);
-
             productsDB = productRepo.findAll().stream()
                     .filter(filter)
                     .toList();
-
         } else if (name != null) {
             productsDB = productRepo.findByNameContaining(name);
         } else {
             productsDB = productRepo.findAll();
         }
-
-        return productsDB.stream().map(ProductRes::new).toList();
+        return productsDB.stream()
+                .map(ProductDetails::new)
+                .collect(Collectors.toList());
     }
 
-    private Category findCategoryByName(String name) {
-        return categoryRepo.findByName(name)
-                .orElseThrow(() -> {
-                    String message = "La categoria no existe!";
-                    return new HttpException(HttpStatus.NOT_FOUND, message);
-                });
+    public ProductDetails getProductById(Long id) {
+        return new ProductDetails(findById(id));
     }
 
-    public ProductRes findById(Long id) {
-        return productRepo.findById(id)
-                .map(ProductRes::new)
-                .orElseThrow(() -> {
-                    String message = "El producto no existe!";
-                    return new HttpException(HttpStatus.NOT_FOUND, message);
-                });
-    }
-
-    public ProductRes save(ProductReq productReq) {
-        Product productNew = new Product(productReq);
-
-        productReq.getCategories().forEach(categoryName -> {
-            Category categoryDB = findCategoryByName(categoryName);
-            productNew.getCategories().add(categoryDB);
-        });
-
-        return new ProductRes(productRepo.save(productNew));
+    public ProductDetails save(ProductCreate body) {
+        Set<Category> categories = body.getCategories().stream()
+                .map(categoryService::findCategoryByName)
+                .collect(Collectors.toSet());
+        Product productNew = new Product(body, categories);
+        return new ProductDetails(productRepo.save(productNew));
     }
 
     public Product updateStock(Long id, Integer stock) {
-        Product productDB = productRepo.findById(id)
-                .orElseThrow(() -> {
-                    String message = "El producto no existe!!";
-                    return new HttpException(HttpStatus.NOT_FOUND, message);
-                });
-        Integer stockNEW = productDB.getStock() + stock;
-        productDB.setStock(stockNEW);
+        Product productDB = findById(id);
+        productDB.addStock(stock);
         return productRepo.save(productDB);
+    }
+
+    private Product findById(Long id) {
+        return productRepo.findById(id).orElseThrow(() -> {
+            String message = "El producto no existe!!";
+            return new HttpException(HttpStatus.NOT_FOUND, message);
+        });
     }
 }

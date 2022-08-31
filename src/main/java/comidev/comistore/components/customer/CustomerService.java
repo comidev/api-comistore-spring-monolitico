@@ -1,15 +1,17 @@
 package comidev.comistore.components.customer;
 
 import java.util.List;
+import java.util.stream.Collectors;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import comidev.comistore.components.country.Country;
-import comidev.comistore.components.country.CountryRepo;
-import comidev.comistore.components.customer.dto.CustomerReq;
-import comidev.comistore.components.customer.dto.CustomerRes;
-import comidev.comistore.components.customer.dto.CustomerUpdate;
+import comidev.comistore.components.country.CountryService;
+import comidev.comistore.components.customer.request.CustomerCreate;
+import comidev.comistore.components.customer.request.CustomerUpdate;
+import comidev.comistore.components.customer.response.CustomerDetails;
 import comidev.comistore.components.user.User;
 import comidev.comistore.components.user.UserService;
 import comidev.comistore.exceptions.HttpException;
@@ -20,95 +22,69 @@ import lombok.AllArgsConstructor;
 public class CustomerService {
     private final CustomerRepo customerRepo;
     private final UserService userService;
-    private final CountryRepo countryRepo;
+    private final CountryService countryService;
 
-    public List<CustomerRes> findAll() {
+    public List<CustomerDetails> getAllCustomers() {
         return customerRepo.findAll().stream()
-                .map(CustomerRes::new)
-                .toList();
+                .map(CustomerDetails::new)
+                .collect(Collectors.toList());
     }
 
-    private Customer getById(Long id) {
+    public CustomerDetails getCustomerById(Long id) {
+        return new CustomerDetails(findCustomerById(id));
+    }
+
+    public Customer findCustomerById(Long id) {
         return customerRepo.findById(id).orElseThrow(() -> {
             String message = "El cliente no existe!";
             return new HttpException(HttpStatus.NOT_FOUND, message);
         });
     }
 
-    public CustomerRes findById(Long id) {
-        return new CustomerRes(getById(id));
-    }
-
-    private Country findCountryByName(String name) {
-        return countryRepo.findByName(name).orElseThrow(() -> {
-            String message = "El pais no existe!";
-            return new HttpException(HttpStatus.NOT_FOUND, message);
-        });
-    }
-
-    public CustomerRes save(CustomerReq customerReq) {
-        boolean existsEmail = customerRepo.existsByEmail(customerReq.getEmail());
-        if (existsEmail) {
+    @Transactional
+    public CustomerDetails registerCustomer(CustomerCreate body) {
+        if (existsEmail(body.getEmail())) {
             String message = "El email ya existe";
             throw new HttpException(HttpStatus.CONFLICT, message);
         }
 
-        Customer customerNew = new Customer(customerReq);
+        User user = userService.registerCustomer(body.getUser());
+        Country country = countryService.findCountryByName(body.getCountry());
 
-        User userDB = userService.saveCliente(customerReq.getUser());
-        customerNew.setUser(userDB);
-
-        Country countryDB = findCountryByName(customerReq.getCountry());
-        customerNew.setCountry(countryDB);
-
-        return new CustomerRes(customerRepo.save(customerNew));
+        Customer customer = new Customer(body, user, country);
+        return new CustomerDetails(customerRepo.save(customer));
     }
 
-    public CustomerRes update(CustomerUpdate customerUpdate, Long id) {
-        Customer customerDB = getById(id);
+    @Transactional
+    public CustomerDetails updateCustomer(Long id, CustomerUpdate body) {
+        Customer customerDB = findCustomerById(id);
 
-        String emailNew = customerUpdate.getEmail();
-        if (!customerDB.getEmail().equals(emailNew)) {
-            boolean existsEmail = customerRepo.existsByEmail(emailNew);
-            if (existsEmail) {
-                String message = "El email ya existe";
-                throw new HttpException(HttpStatus.CONFLICT, message);
-            }
-            customerDB.setEmail(emailNew);
+        String email = body.getEmail();
+        if (!customerDB.getEmail().equals(email) && existsEmail(email)) {
+            String message = "El email ya existe";
+            throw new HttpException(HttpStatus.CONFLICT, message);
         }
 
-        String usernamePrev = customerDB.getUser().getUsername();
-        String usernameNew = customerUpdate.getUsername();
-        if (!usernamePrev.equals(usernameNew)) {
-            userService.updateUsername(usernamePrev, usernameNew);
-        }
+        String countryName = body.getCountry();
+        boolean isSameCountry = customerDB.getCountry()
+                .getName()
+                .equals(countryName);
+        Country country = isSameCountry ? customerDB.getCountry()
+                : countryService.findCountryByName(countryName);
 
-        String countryNew = customerUpdate.getCountry();
-        if (!customerDB.getCountry().getName().equals(countryNew)) {
-            Country countryDB = findCountryByName(countryNew);
-            customerDB.setCountry(countryDB);
-        }
-
-        customerDB.setName(customerUpdate.getName());
-        customerDB.setGender(customerUpdate.getGender());
-        customerDB.setDateOfBirth(customerUpdate.getDateOfBirth());
-        customerDB.setPhotoUrl(customerUpdate.getPhotoUrl());
-
-        return new CustomerRes(customerRepo.save(customerDB));
+        userService.updateUser(customerDB.getUser(), body.getUser());
+        customerDB.update(body, country);
+        return new CustomerDetails(customerRepo.save(customerDB));
     }
 
-    public void deleteById(Long id) {
-        if (!customerRepo.existsById(id)) {
-            String message = "El usuario no existe!!";
-            throw new HttpException(HttpStatus.NOT_FOUND, message);
-        }
-        customerRepo.deleteById(id);
+    @Transactional
+    public void deleteCustomer(Long id, String password) {
+        Customer customer = findCustomerById(id);
+        customerRepo.delete(customer);
+        userService.deleteUser(customer.getUser(), password);
     }
 
-    public void existsEmail(String email) {
-        if (!customerRepo.existsByEmail(email)) {
-            String message = "El email no existe!";
-            throw new HttpException(HttpStatus.NOT_FOUND, message);
-        }
+    public boolean existsEmail(String email) {
+        return customerRepo.existsByEmail(email);
     }
 }

@@ -1,67 +1,43 @@
 package comidev.comistore.components.customer;
 
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.MediaType;
-import org.springframework.test.web.servlet.MockMvc;
-import org.springframework.test.web.servlet.ResultActions;
-
+import org.springframework.http.HttpStatus;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.sql.Date;
 import java.time.LocalDate;
 
-import comidev.comistore.components.customer.dto.CustomerReq;
-import comidev.comistore.components.customer.dto.CustomerRes;
-import comidev.comistore.components.customer.dto.CustomerUpdate;
-import comidev.comistore.components.customer.dto.EmailBody;
-import comidev.comistore.components.role.Role;
-import comidev.comistore.components.role.RoleName;
-import comidev.comistore.components.user.dto.UserReq;
+import comidev.comistore.components.country.Country;
+import comidev.comistore.components.customer.request.CustomerCreate;
+import comidev.comistore.components.customer.request.CustomerUpdate;
+import comidev.comistore.components.customer.util.Gender;
+import comidev.comistore.components.user.User;
+import comidev.comistore.components.user.request.UserCreate;
+import comidev.comistore.components.user.request.UserUpdate;
 import comidev.comistore.config.ApiIntegrationTest;
-import comidev.comistore.services.AppFabric;
-import comidev.comistore.services.Json;
+import comidev.comistore.helpers.Fabric;
+import comidev.comistore.helpers.Request;
+import comidev.comistore.helpers.Response;
 
 @ApiIntegrationTest
 public class CustomerControllerTest {
     @Autowired
-    private AppFabric fabric;
+    private Fabric fabric;
     @Autowired
-    private MockMvc mockMvc;
-    @Autowired
-    private Json json;
-
-    @BeforeEach
-    void beforeEach() {
-        fabric.getCustomerRepo().deleteAll();
-        fabric.getUserRepo().deleteAll();
-        fabric.getCountryRepo().deleteAll();
-        fabric.getRoleRepo().deleteAll();
-        fabric.getRoleRepo().save(new Role(RoleName.CLIENTE));
-    }
+    private Request request;
 
     // * GET, /customers
-    @Test
-    void NO_CONTENT_CuandoNoHayClientes_findAll() throws Exception {
-        String authorization = fabric.createToken("ADMIN");
-
-        ResultActions res = mockMvc.perform(get("/customers")
-                .header("Authorization", authorization));
-
-        res.andExpect(status().isNoContent());
-    }
-
     @Test
     void OK_CuandoHayAlMenosUnCliente_findAll() throws Exception {
         fabric.createCustomer(null, null, null);
         String authorization = fabric.createToken("ADMIN");
 
-        ResultActions res = mockMvc.perform(get("/customers").header("Authorization", authorization));
+        Response res = request.get("/customers")
+                .authorization(authorization).send();
 
-        res.andExpect(status().isOk());
+        assertEquals(HttpStatus.OK, res.status());
     }
 
     // * GET, /customers/{id}
@@ -69,9 +45,10 @@ public class CustomerControllerTest {
     void NOT_FOUND_CuandoNoExisteElCliente_findById() throws Exception {
         String authorization = fabric.createToken("CLIENTE");
 
-        ResultActions res = mockMvc.perform(get("/customers/123").header("Authorization", authorization));
+        Response res = request.get("/customers/123")
+                .authorization(authorization).send();
 
-        res.andExpect(status().isNotFound());
+        assertEquals(HttpStatus.NOT_FOUND, res.status());
     }
 
     @Test
@@ -79,189 +56,194 @@ public class CustomerControllerTest {
         Customer customerDB = fabric.createCustomer(null, null, null);
         String authorization = fabric.createToken("CLIENTE");
 
-        ResultActions res = mockMvc.perform(get("/customers/" + customerDB.getId()).header("Authorization",
-                authorization));
+        Response res = request.get("/customers/" + customerDB.getId())
+                .authorization(authorization).send();
 
-        res.andExpect(status().isOk());
+        assertEquals(HttpStatus.OK, res.status());
     }
 
     // * POST, /customers
     @Test
     void BAD_REQUEST_CuandoHayErrorDeValidacion_save() throws Exception {
-        UserReq userReq = new UserReq("co", "12");
-        CustomerReq body = new CustomerReq("name", "email",
+        UserCreate userReq = new UserCreate("co", "12");
+        CustomerCreate body = new CustomerCreate("name", "email",
                 Gender.MALE, Date.valueOf(LocalDate.of(2000, 3, 11)), "photoUrl", userReq, "Perú");
 
-        ResultActions res = mockMvc.perform(post("/customers")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(json.toJson(body)));
+        Response res = request.post("/customers")
+                .body(body).send();
 
-        res.andExpect(status().isBadRequest());
+        assertEquals(HttpStatus.BAD_REQUEST, res.status());
     }
 
     @Test
     void CONFLICT_CuandoElEmailYaExiste_save() throws Exception {
-        String email = "comidev.contacto@gmail.com";
+        String email = "comidev.cdfgdsfgfdgontacto@gmail.com";
         fabric.createCustomer(email, null, null);
 
-        UserReq userReq = new UserReq("comidev", "123");
-        CustomerReq body = new CustomerReq("name", email,
+        UserCreate userReq = new UserCreate("comiddgdfgdfgev", "123");
+        CustomerCreate body = new CustomerCreate("name", email,
                 Gender.MALE, Date.valueOf(LocalDate.of(2000, 3, 11)), "photoUrl", userReq, "Perú");
 
-        ResultActions res = mockMvc.perform(post("/customers")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(json.toJson(body)));
+        Response res = request.post("/customers")
+                .body(body).send();
 
-        res.andExpect(status().isConflict());
+        assertEquals(HttpStatus.CONFLICT, res.status());
     }
 
     @Test
     void CONFLICT_CuandoElUsernameYaExiste_save() throws Exception {
-        String username = "comidev";
+        String username = "comidfgdfsdev";
         fabric.createUser(username, null);
-        UserReq userReq = new UserReq(username, "123");
-        CustomerReq body = new CustomerReq("name", "email@gmail.com",
+        UserCreate userReq = new UserCreate(username, "123");
+        CustomerCreate body = new CustomerCreate("name", "emaifdgfsdl@gmail.com",
                 Gender.MALE, Date.valueOf(LocalDate.of(2000, 3, 11)), "photoUrl", userReq, "Perú");
 
-        ResultActions res = mockMvc.perform(post("/customers")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(json.toJson(body)));
+        Response res = request.post("/customers")
+                .body(body).send();
 
-        res.andExpect(status().isConflict());
+        assertEquals(HttpStatus.CONFLICT, res.status());
     }
 
     @Test
     void NOT_FOUND_CuandoElPaisNoExiste_save() throws Exception {
-        UserReq userReq = new UserReq("comidev", "1234");
-        CustomerReq body = new CustomerReq("name", "email@gmail.com",
-                Gender.MALE, Date.valueOf(LocalDate.of(2000, 3, 11)), "photoUrl", userReq, "Perú");
+        UserCreate userReq = new UserCreate("comgfgfgfdsgsidev", "1234");
+        CustomerCreate body = new CustomerCreate("name", "emasdfgfdsgdfil@gmail.com",
+                Gender.MALE, Date.valueOf(LocalDate.of(2000, 3, 11)), "photoUrl", userReq, "Pefdgfdgdffdgrú");
 
-        ResultActions res = mockMvc.perform(post("/customers")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(json.toJson(body)));
+        Response res = request.post("/customers")
+                .body(body).send();
 
-        res.andExpect(status().isNotFound());
+        assertEquals(HttpStatus.NOT_FOUND, res.status());
     }
 
     @Test
     void CREATED_CuandoSeGuardaCorrectamente_save() throws Exception {
         String country = "Perú";
         fabric.createCountry(country);
-        UserReq userReq = new UserReq("comidev", "123");
-        CustomerReq body = new CustomerReq("name", "email@gmail.com",
+        UserCreate userReq = new UserCreate("comidsdfgfsdev", "123");
+        CustomerCreate body = new CustomerCreate("name", "emaigdsfgsdl@gmail.com",
                 Gender.MALE, Date.valueOf(LocalDate.of(2000, 3, 11)), "photoUrl", userReq, country);
 
-        ResultActions res = mockMvc.perform(post("/customers")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(json.toJson(body)));
+        Response res = request.post("/customers")
+                .body(body).send();
 
-        res.andExpect(status().isCreated());
+        assertEquals(HttpStatus.CREATED, res.status());
     }
 
     // * PUT, /customers/{id}
     @Test
     void BAD_REQUEST_CuandoHayErrorDeValidacion_update() throws Exception {
-        CustomerUpdate body = new CustomerUpdate("Omar", "omargmail.com",
-                Gender.MALE, Date.valueOf(LocalDate.of(2000, 3, 11)), "photoUrl", "com", "Perú");
+        UserUpdate userUpdate = new UserUpdate("usegdsfgsdfgrname", "newPassword",
+                "password");
+        CustomerUpdate body = new CustomerUpdate("Omar", "omasdgdfsgrgmail.com",
+                Gender.MALE, Date.valueOf(LocalDate.of(2000, 3, 11)), "photoUrl", "Perú", userUpdate);
         String authorization = fabric.createToken("CLIENTE");
 
-        ResultActions res = mockMvc.perform(put("/customers/123")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(json.toJson(body)).header("Authorization",
-                        authorization));
+        Response res = request.put("/customers/123")
+                .authorization(authorization)
+                .body(body).send();
 
-        res.andExpect(status().isBadRequest());
+        assertEquals(HttpStatus.BAD_REQUEST, res.status());
     }
 
     @Test
     void NOT_FOUND_CuandoElClienteNoExiste_update() throws Exception {
+        UserUpdate userUpdate = new UserUpdate("username", "newPassword",
+                "password");
         CustomerUpdate body = new CustomerUpdate("Omar", "omar@gmail.com",
-                Gender.MALE, Date.valueOf(LocalDate.of(2000, 3, 11)), "photoUrl", "comidev", "Perú");
+                Gender.MALE, Date.valueOf(LocalDate.of(2000, 3, 11)),
+                "photoUrl", "Perú", userUpdate);
         String authorization = fabric.createToken("CLIENTE");
 
-        ResultActions res = mockMvc.perform(put("/customers/123")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(json.toJson(body)).header("Authorization",
-                        authorization));
+        Response res = request.put("/customers/123")
+                .authorization(authorization)
+                .body(body).send();
 
-        res.andExpect(status().isNotFound());
+        assertEquals(HttpStatus.NOT_FOUND, res.status());
     }
 
     @Test
     void CONFLICT_CuandoElEmailNuevoYaExiste_update() throws Exception {
-        String email = "comidev.contacto@gmail.com";
+        String email = "comidev.congdfgfdsgtacto@gmail.com";
         fabric.createCustomer(email, null, null);
+
         Customer customerDB = fabric.createCustomer(null, null, null);
         String authorization = fabric.createToken("CLIENTE");
 
         CustomerUpdate body = new CustomerUpdate("Omar", email,
                 Gender.MALE, Date.valueOf(LocalDate.of(2000, 3, 11)),
-                "photoUrl", "username", "Bolivia");
+                "photoUrl", "Bolivia",
+                new UserUpdate("", "", ""));
 
-        ResultActions res = mockMvc.perform(put("/customers/" + customerDB.getId())
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(json.toJson(body)).header("Authorization",
-                        authorization));
+        Response res = request.put("/customers/" + customerDB.getId())
+                .authorization(authorization)
+                .body(body).send();
 
-        res.andExpect(status().isConflict());
+        assertEquals(HttpStatus.CONFLICT, res.status());
     }
 
     @Test
     void CONFLICT_CuandoElUsernameNuevoYaExiste_update() throws Exception {
-        String username = "comidev";
-        fabric.createUser(username, null);
-        Customer customerDB = fabric.createCustomer(null, null, null);
+        String username = "comidfsgsdfgdsgsdfdev";
+        String password = "password";
+        String country = "xddf";
+        Country countrydb = fabric.createCountry(country);
+        fabric.createUser(username, password);
+        User user = fabric.createUser(null, password);
+        Customer customerDB = fabric.createCustomer(null, user, countrydb);
         String authorization = fabric.createToken("CLIENTE");
 
-        CustomerUpdate body = new CustomerUpdate("Omar", "omar3@gmail.com",
+        UserUpdate userUpdate = new UserUpdate(username, "newPassword",
+                password);
+        CustomerUpdate body = new CustomerUpdate("Omar", "omadsfgsdfgr3@gmail.com",
                 Gender.MALE, Date.valueOf(LocalDate.of(2000, 3, 11)),
-                "photoUrl", username, "Bolivia");
+                "photoUrl", country, userUpdate);
 
-        ResultActions res = mockMvc.perform(put("/customers/" + customerDB.getId())
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(json.toJson(body)).header("Authorization",
-                        authorization));
+        Response res = request.put("/customers/" + customerDB.getId())
+                .authorization(authorization)
+                .body(body).send();
 
-        res.andExpect(status().isConflict());
+        assertEquals(HttpStatus.CONFLICT, res.status());
     }
 
     @Test
     void NOT_FOUND_CuandoElPaisNuevoNoExiste_update() throws Exception {
         Customer customerDB = fabric.createCustomer(null, null, null);
-
-        CustomerUpdate body = new CustomerUpdate("Omar", "omar3@gmail.com",
+        UserUpdate userUpdate = new UserUpdate("usegfdsgdfsgrname",
+                "newPassword", "password");
+        CustomerUpdate body = new CustomerUpdate("Omar", "omar3dfgsdfg@gmail.com",
                 Gender.MALE, Date.valueOf(LocalDate.of(2000, 3, 11)),
-                "photoUrl", "username3", "Bolivia");
+                "photoUrl", "fsdfsfsd", userUpdate);
         String authorization = fabric.createToken("CLIENTE");
 
-        ResultActions res = mockMvc.perform(put("/customers/" + customerDB.getId())
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(json.toJson(body)).header("Authorization",
-                        authorization));
+        Response res = request.put("/customers/" + customerDB.getId())
+                .authorization(authorization)
+                .body(body).send();
 
-        res.andExpect(status().isNotFound());
+        assertEquals(HttpStatus.NOT_FOUND, res.status());
     }
 
     @Test
     void OK_CuandoSeGuardaCorrectamente_update() throws Exception {
-        String country = "Colombia";
-        fabric.createCountry(country);
-        Customer customerDB = fabric.createCustomer(null, null, null);
+        Country country = fabric.createCountry(null);
+        String password = "xdfdfd";
+        User user = fabric.createUser(null, password);
+        Customer customer = fabric.createCustomer(null, user, country);
 
-        CustomerUpdate body = new CustomerUpdate("Omar", "omar3@gmail.com",
-                Gender.MALE, Date.valueOf(LocalDate.of(2000, 3, 11)),
-                "photoUrl", "username3", country);
+        UserUpdate userUpdate = new UserUpdate("username",
+                "newPassword", password);
+        CustomerUpdate body = new CustomerUpdate("Omar",
+                "omar3@gmail.com", Gender.MALE,
+                Date.valueOf(LocalDate.of(2000, 3, 11)),
+                "photoUrl", country.getName(), userUpdate);
         String authorization = fabric.createToken("CLIENTE");
 
-        ResultActions res = mockMvc.perform(put("/customers/" + customerDB.getId())
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(json.toJson(body)).header("Authorization",
-                        authorization));
+        Response res = request.put("/customers/" + customer.getId())
+                .authorization(authorization)
+                .body(body).send();
 
-        res.andExpect(status().isOk());
-        String bodyRes = res.andReturn().getResponse().getContentAsString();
-        CustomerRes customerRes = json.fromJson(bodyRes, CustomerRes.class);
-        assertEquals(customerRes.getUsername(), body.getUsername());
+        assertEquals(HttpStatus.OK, res.status());
+        assertTrue(res.bodyContains(body.getEmail()));
     }
 
     // * DELETE, /customers/{id}
@@ -269,46 +251,35 @@ public class CustomerControllerTest {
     void NOT_FOUND_CuandoElClienteNoExiste_deleteById() throws Exception {
         String authorization = fabric.createToken("CLIENTE");
 
-        ResultActions res = mockMvc.perform(delete("/customers/123").header("Authorization",
-                authorization));
+        Response res = request.delete("/customers/123?password=" + "dsfsdff")
+                .authorization(authorization).send();
 
-        res.andExpect(status().isNotFound());
+        assertEquals(HttpStatus.NOT_FOUND, res.status());
     }
 
     @Test
     void OK_CuandoElClienteEsEliminado_deleteById() throws Exception {
-        Customer customerDB = fabric.createCustomer(null, null, null);
+        String password = "omarerej";
+        User user = fabric.createUser(null, password);
+
+        Customer customerDB = fabric.createCustomer(null, user, null);
         String authorization = fabric.createToken("CLIENTE");
 
-        ResultActions res = mockMvc.perform(delete("/customers/" + customerDB.getId()).header("Authorization",
-                authorization));
+        Response res = request.delete("/customers/" + customerDB.getId())
+                .addParam("password", password)
+                .authorization(authorization).send();
 
-        res.andExpect(status().isOk());
+        assertEquals(HttpStatus.NO_CONTENT, res.status());
     }
 
     // * POST, /customers/email
     @Test
-    void NOT_FOUND_CuandoElEmailNoExiste_existsEmail() throws Exception {
-        EmailBody body = new EmailBody("comidev@gmail.com");
-
-        ResultActions res = mockMvc.perform(post("/customers/email")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(json.toJson(body)));
-
-        res.andExpect(status().isNotFound());
-    }
-
-    @Test
     void OK_CuandoElEmailExiste_existsEmail() throws Exception {
-        String email = "comidev.contacto@gmail.com";
+        String email = "comidev.contgdfgdfsgdfgacto@gmail.com";
         fabric.createCustomer(email, null, null);
 
-        EmailBody body = new EmailBody(email);
+        Response res = request.post("/customers/exists?email=" + email).send();
 
-        ResultActions res = mockMvc.perform(post("/customers/email")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(json.toJson(body)));
-
-        res.andExpect(status().isOk());
+        assertEquals(HttpStatus.OK, res.status());
     }
 }

@@ -17,7 +17,7 @@ public class CategoryRepoTest {
     @Test
     void IS_PRESENT_CuandoExisteLaCategoria_findByName() {
         String name = "Categoria";
-        categoryRepo.save(new Category(name));
+        categoryRepo.save(new Category(null, name));
 
         Optional<Category> categoryOPT = categoryRepo.findByName(name);
 

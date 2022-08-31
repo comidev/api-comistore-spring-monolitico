@@ -13,7 +13,7 @@ import javax.persistence.OneToMany;
 import javax.persistence.Table;
 
 import comidev.comistore.components.customer.Customer;
-import comidev.comistore.components.invoice.dto.InvoiceReq;
+import comidev.comistore.components.invoice.request.InvoiceCreate;
 import comidev.comistore.components.invoice_item.InvoiceItem;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -47,7 +47,7 @@ public class Invoice {
         this.invoiceItems = invoiceItems;
     }
 
-    public Invoice(InvoiceReq invoiceReq) {
-        this.description = invoiceReq.getDescription();
+    public Invoice(InvoiceCreate dto) {
+        this.description = dto.getDescription();
     }
 }

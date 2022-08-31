@@ -2,69 +2,56 @@ package comidev.comistore.components.invoice;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Collectors;
 
-import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 
 import comidev.comistore.components.customer.Customer;
-import comidev.comistore.components.customer.CustomerRepo;
-import comidev.comistore.components.invoice.dto.InvoiceReq;
-import comidev.comistore.components.invoice.dto.InvoiceRes;
+import comidev.comistore.components.customer.CustomerService;
+import comidev.comistore.components.invoice.request.InvoiceCreate;
+import comidev.comistore.components.invoice.response.InvoiceDetails;
 import comidev.comistore.components.invoice_item.InvoiceItem;
 import comidev.comistore.components.invoice_item.InvoiceItemService;
-import comidev.comistore.components.invoice_item.dto.InvoiceItemReq;
-import comidev.comistore.exceptions.HttpException;
 import lombok.AllArgsConstructor;
 
 @Service
 @AllArgsConstructor
 public class InvoiceService {
     private final InvoiceRepo invoiceRepo;
-    private final CustomerRepo customerRepo;
+    private final CustomerService customerService;
     private final InvoiceItemService invoiceItemService;
 
-    public List<InvoiceRes> findAll() {
+    public List<InvoiceDetails> getAllInvoices() {
         return invoiceRepo.findAll().stream()
-                .map(InvoiceRes::new).toList();
+                .map(InvoiceDetails::new)
+                .collect(Collectors.toList());
     }
 
-    public List<InvoiceRes> findByCustomerId(Long id) {
-        Customer customer = customerRepo.findById(id)
-                .orElseThrow(() -> {
-                    String message = "El cliente no existe!";
-                    return new HttpException(HttpStatus.NOT_FOUND, message);
-                });
+    public List<InvoiceDetails> getInvoiceByCustomer(Long id) {
+        Customer customer = customerService.findCustomerById(id);
 
-        List<Invoice> invoicesDB = invoiceRepo.findByCustomer(customer);
-
-        return invoicesDB.stream()
-                .map(InvoiceRes::new)
-                .toList();
+        return invoiceRepo.findByCustomer(customer).stream()
+                .map(InvoiceDetails::new)
+                .collect(Collectors.toList());
     }
 
-    public void save(InvoiceReq invoiceReq) {
-        Invoice invoiceNew = new Invoice(invoiceReq);
+    public void registerInvoice(InvoiceCreate body) {
+        Customer customer = customerService.findCustomerById(
+                body.getCustomerId());
 
-        Customer customer = customerRepo.findById(invoiceReq.getCustomerId())
-                .orElseThrow(() -> {
-                    String message = "El cliente no existe!!";
-                    return new HttpException(HttpStatus.NOT_FOUND, message);
-                });
-
-        float total = 0f;
         List<InvoiceItem> items = new ArrayList<>();
-        for (InvoiceItemReq item : invoiceReq.getItems()) {
+        float total = (float) body.getItems().stream()
+                .mapToDouble(item -> {
+                    InvoiceItem itemDB = invoiceItemService.registerInvoiceItem(item);
+                    items.add(itemDB);
+                    return item.getQuantity() * itemDB.getProduct().getPrice();
+                })
+                .sum();
 
-            InvoiceItem itemDB = invoiceItemService.saveInvoiceItem(item);
-
-            total += item.getQuantity() * itemDB.getProduct().getPrice();
-            items.add(itemDB);
-        }
-
+        Invoice invoiceNew = new Invoice(body);
         invoiceNew.setCustomer(customer);
         invoiceNew.setInvoiceItems(items);
         invoiceNew.setTotal(total);
-
         invoiceRepo.save(invoiceNew);
     }
 }

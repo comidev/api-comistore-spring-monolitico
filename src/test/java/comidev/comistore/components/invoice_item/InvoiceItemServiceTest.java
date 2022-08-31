@@ -12,7 +12,7 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import comidev.comistore.components.invoice_item.dto.InvoiceItemReq;
+import comidev.comistore.components.invoice_item.request.InvoiceItemCreate;
 import comidev.comistore.components.product.Product;
 import comidev.comistore.components.product.ProductService;
 
@@ -26,34 +26,32 @@ public class InvoiceItemServiceTest {
 
     @BeforeEach
     void setUp() {
-        this.invoiceItemService = new InvoiceItemService(
-                invoiceItemRepo,
-                productService);
+        this.invoiceItemService = new InvoiceItemService(invoiceItemRepo, productService);
     }
 
     @Test
     void testSaveInvoiceItem_PuedeGuardarUnItemDeCompra() {
         // ! Arreglar
-        InvoiceItemReq invoiceItemReq = new InvoiceItemReq(1, 1l);
+        InvoiceItemCreate body = new InvoiceItemCreate(1, 1l);
 
-        InvoiceItem invoiceItem = new InvoiceItem(invoiceItemReq);
         Product productDB = new Product();
+        InvoiceItem invoiceItem = new InvoiceItem(body, productDB);
         invoiceItem.setProduct(productDB);
 
         when(productService.updateStock(
-                invoiceItemReq.getProductId(),
-                (invoiceItemReq.getQuantity()) * (-1))).thenReturn(productDB);
+                body.getProductId(),
+                (body.getQuantity()) * (-1))).thenReturn(productDB);
         when(invoiceItemRepo.save(any())).thenReturn(invoiceItem);
 
         // ! Actuar
-        InvoiceItem actual = invoiceItemService.saveInvoiceItem(invoiceItemReq);
+        InvoiceItem actual = invoiceItemService.registerInvoiceItem(body);
 
         // ! Afirmar
-        assertEquals(invoiceItemReq.getQuantity(), actual.getQuantity());
+        assertEquals(body.getQuantity(), actual.getQuantity());
 
         verify(productService).updateStock(
-                invoiceItemReq.getProductId(),
-                (invoiceItemReq.getQuantity()) * (-1));
+                body.getProductId(),
+                (body.getQuantity()) * (-1));
 
         ArgumentCaptor<InvoiceItem> invoiceItemAC = ArgumentCaptor
                 .forClass(InvoiceItem.class);

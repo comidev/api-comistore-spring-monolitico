@@ -14,36 +14,26 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 
-import comidev.comistore.components.role.Role;
-import comidev.comistore.components.role.RoleName;
-import comidev.comistore.components.role.RoleRepo;
-import comidev.comistore.components.user.dto.Passwords;
-import comidev.comistore.components.user.dto.UserReq;
-import comidev.comistore.components.user.dto.UserRes;
+import comidev.comistore.components.auth.request.AuthLogin;
+import comidev.comistore.components.role.RoleService;
+import comidev.comistore.components.role.util.RoleName;
+import comidev.comistore.components.user.request.UserCreate;
+import comidev.comistore.components.user.response.UserDetails;
 import comidev.comistore.exceptions.HttpException;
-import comidev.comistore.services.jwt.JwtService;
-import comidev.comistore.services.jwt.Payload;
-import comidev.comistore.services.jwt.Tokens;
 
 @ExtendWith(MockitoExtension.class)
 public class UserServiceTest {
-
+    private UserService userService;
     @Mock
     private UserRepo userRepo;
     @Mock
-    private RoleRepo roleRepo;
-    @Mock
-    private JwtService jwtService;
+    private RoleService roleService;
     @Mock
     private BCryptPasswordEncoder bcrypt;
 
-    private UserService userService;
-
     @BeforeEach
     void beforeEach() {
-        this.userService = new UserService(userRepo, roleRepo, jwtService, bcrypt);
-        roleRepo.deleteAll();
-        roleRepo.save(new Role(RoleName.ADMIN));
+        this.userService = new UserService(userRepo, roleService, bcrypt);
     }
 
     // * findAll
@@ -54,62 +44,17 @@ public class UserServiceTest {
         user.setUsername(username);
         when(userRepo.findAll()).thenReturn(List.of(user));
 
-        List<UserRes> users = userService.findAll();
+        List<UserDetails> users = userService.getAllUsers();
 
         verify(userRepo).findAll();
         assertEquals(user.getUsername(), users.get(0).getUsername());
     }
 
-    // * saveAdmin
-    @Test
-    void testSaveAdmin_puedeGuardarUnUsuarioAdmin() {
-        // Arreglar
-        UserReq userReq = new UserReq();
-
-        User userDB = new User(userReq.getUsername(), userReq.getPassword());
-        Role roleDB = new Role();
-        userDB.getRoles().add(roleDB);
-
-        when(userRepo.existsByUsername(userReq.getUsername())).thenReturn(false);
-        when(bcrypt.encode(userReq.getPassword())).thenReturn(userReq.getPassword());
-        when(roleRepo.findByName(RoleName.ADMIN)).thenReturn(roleDB);
-        when(userRepo.save(userDB)).thenReturn(userDB);
-
-        // Actuar
-        userService.saveAdmin(userReq);
-
-        // Afirmar
-        verify(userRepo).existsByUsername(userReq.getUsername());
-        verify(bcrypt).encode(userReq.getPassword());
-        verify(roleRepo).findByName(RoleName.ADMIN);
-        verify(userRepo).save(userDB);
-    }
-
-    @Test
-    void testSaveAdmin_throwHttpExceptionSiExisteElUsername() {
-        // Arreglar
-        UserReq userReq = new UserReq();
-
-        when(userRepo.existsByUsername(userReq.getUsername())).thenReturn(true);
-
-        // Actuar
-        HttpStatus status = assertThrows(HttpException.class, () -> {
-            userService.saveAdmin(userReq);
-        }).getStatus();
-
-        // Afirmar
-        assertEquals(HttpStatus.CONFLICT, status);
-        verify(userRepo).existsByUsername(userReq.getUsername());
-        verify(bcrypt, never()).encode(any());
-        verify(roleRepo, never()).findByName(any());
-        verify(userRepo, never()).save(any());
-    }
     // * existsUsername
     @Test
     void testExistsUsername_PuedeVerificarSiExisteElUsuario() {
         // Arreglar
         String username = "username";
-
         when(userRepo.existsByUsername(username)).thenReturn(true);
 
         // Actuar
@@ -120,65 +65,46 @@ public class UserServiceTest {
         verify(userRepo).existsByUsername(username);
     }
 
-    // * updatePassword
+    // * registerUserAdmin
     @Test
-    void testUpdatePassword_PuedeActualizarElPassword() {
+    void testSaveAdmin_puedeGuardarUnUsuarioAdmin() {
         // Arreglar
-        Long id = 1l;
-        Passwords passwords = new Passwords("nuevo", "actual");
-        User userDB = new User("username", passwords.getCurrentPassword());
+        String username = "comidev";
+        String password = "passstrong";
+        UserCreate body = new UserCreate(username, password);
+        when(userRepo.existsByUsername(username)).thenReturn(false);
+        when(bcrypt.encode(password)).thenReturn(password);
+        when(roleService.initRole(RoleName.ADMIN)).thenReturn(null);
 
-        when(userRepo.findById(id)).thenReturn(Optional.of(userDB));
-        when(bcrypt.matches(passwords.getCurrentPassword(), userDB.getPassword()))
-            .thenReturn(true);
+        User user = new User(body, null);
+        when(userRepo.save(user)).thenReturn(user);
 
         // Actuar
-        boolean response = userService.updatePassword(id, passwords);
+        userService.registerUserAdmin(body);
 
         // Afirmar
-        assertTrue(response);
-        verify(userRepo).findById(id);
-        verify(bcrypt)
-        .matches(passwords.getCurrentPassword(), passwords.getCurrentPassword());
-        verify(userRepo).save(userDB);
+        verify(userRepo).existsByUsername(body.getUsername());
+        verify(bcrypt).encode(body.getPassword());
+        verify(roleService).initRole(RoleName.ADMIN);
+        verify(userRepo).save(user);
     }
 
     @Test
-    void testUpdatePassword_ThrowNotFoundSiElIdNoExiste() {
+    void testSaveAdmin_throwHttpExceptionSiExisteElUsername() {
         // Arreglar
-        Long id = 1l;
-        Passwords passwords = new Passwords("nuevo", "actual");
-        when(userRepo.findById(id)).thenReturn(Optional.empty());
+        UserCreate body = new UserCreate();
+        when(userRepo.existsByUsername(body.getUsername())).thenReturn(true);
 
         // Actuar
+        HttpStatus status = assertThrows(HttpException.class, () -> {
+            userService.registerUserAdmin(body);
+        }).getStatus();
 
         // Afirmar
-        HttpStatus status = assertThrows(HttpException.class, () -> {
-            userService.updatePassword(id, passwords);
-        }).getStatus();
-        assertEquals(HttpStatus.NOT_FOUND, status);
-        verify(userRepo).findById(id);
-        verify(bcrypt, never()).matches(any(), any());
-        verify(userRepo, never()).save(any());
-    }
-
-    @Test
-    void testUpdatePassword_ThrowUnAuthorizedSiLosPasswordsNoSonIguales() {
-        // Arreglar
-        Long id = 1l;
-        Passwords passwords = new Passwords("nuevo", "actual");
-        User userDB = new User("username", passwords.getCurrentPassword());
-        when(userRepo.findById(id)).thenReturn(Optional.of(userDB));
-
-        // Actuar
-
-        // Afirmar
-        HttpStatus status = assertThrows(HttpException.class, () -> {
-            userService.updatePassword(id, passwords);
-        }).getStatus();
-        assertEquals(HttpStatus.UNAUTHORIZED, status);
-        verify(userRepo).findById(id);
-        verify(bcrypt).matches(passwords.getCurrentPassword(), passwords.getCurrentPassword());
+        assertEquals(HttpStatus.CONFLICT, status);
+        verify(userRepo).existsByUsername(body.getUsername());
+        verify(bcrypt, never()).encode(any());
+        verify(roleService, never()).initRole(any());
         verify(userRepo, never()).save(any());
     }
 
@@ -188,23 +114,18 @@ public class UserServiceTest {
         // Arreglar
         String username = "username";
         String password = "password";
-        UserReq userReq = new UserReq(username, password);
-        User userDB = new User(username, password);
-        Long id = 1l;
-        userDB.setId(id);
-        Tokens tokensM = new Tokens("access_token", "refresh_token");
+        AuthLogin userReq = new AuthLogin(username, password);
+        User userDB = new User(new UserCreate(username, password), null);
         when(userRepo.findByUsername(username)).thenReturn(Optional.of(userDB));
-        when(bcrypt.matches(password, password)).thenReturn(true);
-        when(jwtService.createTokens(any())).thenReturn(tokensM);
+        when(bcrypt.matches(password, userDB.getPassword())).thenReturn(true);
 
         // Actuar
-        Tokens tokensRes = userService.login(userReq);
+        User response = userService.login(userReq);
 
         // Afirmar
-        assertEquals(tokensM, tokensRes);
+        assertEquals(userDB, response);
         verify(userRepo).findByUsername(username);
         verify(bcrypt).matches(password, password);
-        verify(jwtService).createTokens(any());
     }
 
     @Test
@@ -212,23 +133,18 @@ public class UserServiceTest {
         // Arreglar
         String username = "username";
         String password = "password";
-        UserReq userReq = new UserReq(username, password);
-        User userDB = new User(username, password);
-        Long id = 1l;
-        userDB.setId(id);
+        AuthLogin userReq = new AuthLogin(username, password);
         when(userRepo.findByUsername(username)).thenReturn(Optional.empty());
 
         // Actuar
-
-        // Afirmar
         HttpStatus status = assertThrows(HttpException.class, () -> {
             userService.login(userReq);
         }).getStatus();
+
+        // Afirmar
         assertEquals(HttpStatus.UNAUTHORIZED, status);
         verify(userRepo).findByUsername(username);
         verify(bcrypt, never()).matches(any(), any());
-        verify(jwtService, never()).createTokens(any());
-
     }
 
     @Test
@@ -236,55 +152,19 @@ public class UserServiceTest {
         // Arreglar
         String username = "username";
         String password = "password";
-        UserReq userReq = new UserReq(username, password);
-        User userDB = new User(username, password);
-        Long id = 1l;
-        userDB.setId(id);
+        AuthLogin userReq = new AuthLogin(username, password);
+        User userDB = new User(new UserCreate(username, password), null);
         when(userRepo.findByUsername(username)).thenReturn(Optional.of(userDB));
-        when(bcrypt.matches(password, password)).thenReturn(false);
+        when(bcrypt.matches(password, userDB.getPassword())).thenReturn(false);
 
         // Actuar
-
-        // Afirmar
         HttpStatus status = assertThrows(HttpException.class, () -> {
             userService.login(userReq);
         }).getStatus();
+
+        // Afirmar
         assertEquals(HttpStatus.UNAUTHORIZED, status);
         verify(userRepo).findByUsername(username);
-        verify(bcrypt).matches(password, password);
-        verify(jwtService, never()).createTokens(any());
-    }
-
-    // * tokenRefresh
-    @Test
-    void testTokenRefresh_PuedeDarmeNuevosTokens() {
-        // Arreglar
-        String token = "xd";
-        Payload payload = new Payload();
-        Tokens tokens = new Tokens("access_token", "refresh_token");
-        when(jwtService.verify(token)).thenReturn(payload);
-        when(jwtService.createTokens(payload)).thenReturn(tokens);
-
-        // Actuar
-        Tokens tokensRes = userService.tokenRefresh(token);
-
-        // Afirmar
-        assertEquals(tokens, tokensRes);
-        verify(jwtService).verify(token);
-        verify(jwtService).createTokens(payload);
-    }
-
-    // * tokenValidate
-    @Test
-    void testTokenValidate_PuedeValidar() {
-        // Arreglar
-        String token = "xd";
-        when(jwtService.verify(token)).thenReturn(null);
-
-        // Actuar
-        userService.tokenValidate(token);
-
-        // Afirmar
-        verify(jwtService).verify(token);
+        verify(bcrypt).matches(password, userDB.getPassword());
     }
 }

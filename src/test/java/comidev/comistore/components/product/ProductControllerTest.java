@@ -2,40 +2,34 @@ package comidev.comistore.components.product;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.MediaType;
-import org.springframework.test.web.servlet.MockMvc;
-import org.springframework.test.web.servlet.ResultActions;
-
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
+import org.springframework.http.HttpStatus;
 
 import java.util.List;
 
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import comidev.comistore.components.category.Category;
-import comidev.comistore.components.product.dto.ProductReq;
+import comidev.comistore.components.product.request.ProductCreate;
 import comidev.comistore.config.ApiIntegrationTest;
-import comidev.comistore.services.AppFabric;
-import comidev.comistore.services.Json;
+import comidev.comistore.helpers.Fabric;
+import comidev.comistore.helpers.Request;
+import comidev.comistore.helpers.Response;
 
 @ApiIntegrationTest
 public class ProductControllerTest {
     @Autowired
-    private AppFabric fabric;
+    private Fabric fabric;
     @Autowired
-    private MockMvc mockMvc;
-    @Autowired
-    private Json json;
-
+    private Request request;
 
     // * GET, /products
     @Test
     void OK_CuandoHayAlMenosUnProducto_findAllOrFields() throws Exception {
         fabric.createProduct(null);
 
-        ResultActions res = mockMvc.perform(get("/products"));
+        Response res = request.get("/products").send();
 
-        res.andExpect(status().isOk());
+        assertEquals(HttpStatus.OK, res.status());
     }
 
     @Test
@@ -43,18 +37,18 @@ public class ProductControllerTest {
         String name = "Teclado Portatil";
         fabric.createProduct("Contengo " + name + " este nombre");
 
-        ResultActions res = mockMvc.perform(get("/products?name=" + name));
+        Response res = request.get("/products?name=" + name).send();
 
-        res.andExpect(status().isOk());
+        assertEquals(HttpStatus.OK, res.status());
     }
 
     @Test
     void NOT_FOUND_CuandoLaCategoriaNoExiste_findAllOrFields() throws Exception {
         String category = "NO EXISTO";
 
-        ResultActions res = mockMvc.perform(get("/products?category=" + category));
+        Response res = request.get("/products?category=" + category).send();
 
-        res.andExpect(status().isNotFound());
+        assertEquals(HttpStatus.NOT_FOUND, res.status());
     }
 
     @Test
@@ -82,53 +76,55 @@ public class ProductControllerTest {
         productRepo.save(product2);
         productRepo.save(product3);
 
-        ResultActions res = mockMvc.perform(get("/products?category=" + category));
+        Response res = request.get("/products?category=" + category).send();
 
-        res.andExpect(status().isOk());
+        assertEquals(HttpStatus.OK, res.status());
     }
 
     // * GET, /products/{id}
     @Test
     void NOT_FOUND_CuandoNoExisteElProducto_findById() throws Exception {
-        ResultActions res = mockMvc.perform(get("/products/123"));
+        Response res = request.get("/products/123").send();
 
-        res.andExpect(status().isNotFound());
+        assertEquals(HttpStatus.NOT_FOUND, res.status());
     }
 
     @Test
     void OK_CuandoExisteElProducto_findById() throws Exception {
         Product productDB = fabric.createProduct(null);
 
-        ResultActions res = mockMvc.perform(get("/products/" + productDB.getId()));
+        Response res = request.get("/products/" + productDB.getId()).send();
 
-        res.andExpect(status().isOk());
+        assertEquals(HttpStatus.OK, res.status());
     }
 
     // * POST, /products
     @Test
     void BAD_REQUEST_CuandoHayErrorDeValidacion_save() throws Exception {
         String authorization = fabric.createToken("ADMIN");
-        ProductReq productReq = new ProductReq("name", "photoUrl",
+        ProductCreate body = new ProductCreate("name", "photoUrl",
                 "description", -100, 10.5f, List.of());
 
-        ResultActions res = mockMvc.perform(post("/products")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(json.toJson(productReq)).header("Authorization", authorization));
+        Response res = request.post("/products")
+                .authorization(authorization)
+                .body(body)
+                .send();
 
-        res.andExpect(status().isBadRequest());
+        assertEquals(HttpStatus.BAD_REQUEST, res.status());
     }
 
     @Test
     void NOT_FOUND_CuandoUnoOMasCategoriasNoExisten_save() throws Exception {
         String authorization = fabric.createToken("ADMIN");
-        ProductReq productReq = new ProductReq("name", "photoUrl",
+        ProductCreate body = new ProductCreate("name", "photoUrl",
                 "description", 100, 10.5f, List.of("NO existo"));
 
-        ResultActions res = mockMvc.perform(post("/products")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(json.toJson(productReq)).header("Authorization", authorization));
+        Response res = request.post("/products")
+                .authorization(authorization)
+                .body(body)
+                .send();
 
-        res.andExpect(status().isNotFound());
+        assertEquals(HttpStatus.NOT_FOUND, res.status());
     }
 
     @Test
@@ -136,13 +132,14 @@ public class ProductControllerTest {
         String authorization = fabric.createToken("ADMIN");
         String category = "Tecnologia";
         fabric.createCategory(category);
-        ProductReq productReq = new ProductReq("name", "photoUrl",
+        ProductCreate body = new ProductCreate("name", "photoUrl",
                 "description", 100, 10.5f, List.of(category));
 
-        ResultActions res = mockMvc.perform(post("/products")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(json.toJson(productReq)).header("Authorization", authorization));
+        Response res = request.post("/products")
+                .authorization(authorization)
+                .body(body)
+                .send();
 
-        res.andExpect(status().isCreated());
+        assertEquals(HttpStatus.CREATED, res.status());
     }
 }

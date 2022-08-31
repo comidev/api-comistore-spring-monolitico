@@ -14,14 +14,18 @@ import javax.persistence.ManyToMany;
 import javax.persistence.Table;
 
 import comidev.comistore.components.category.Category;
-import comidev.comistore.components.product.dto.ProductReq;
+import comidev.comistore.components.product.request.ProductCreate;
+import lombok.AllArgsConstructor;
 import lombok.Getter;
+import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 @Getter
 @Setter
 @Entity
 @Table(name = "products")
+@NoArgsConstructor
+@AllArgsConstructor
 public class Product {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -43,35 +47,23 @@ public class Product {
     private Float price;
 
     @ManyToMany()
-    @JoinTable(name = "product_category", joinColumns = @JoinColumn(referencedColumnName = "id", name = "product_id"), inverseJoinColumns = @JoinColumn(referencedColumnName = "id", name = "category_id"))
+    @JoinTable(name = "product_category", joinColumns = {
+            @JoinColumn(referencedColumnName = "id", name = "product_id")
+    }, inverseJoinColumns = {
+            @JoinColumn(referencedColumnName = "id", name = "category_id")
+    })
     private Set<Category> categories;
 
-    public Product(String name, String photoUrl, String description,
-            Integer stock, Float price) {
-        this.name = name;
-        this.photoUrl = photoUrl;
-        this.description = description;
-        this.stock = stock;
-        this.price = price;
-        this.categories = new HashSet<>();
+    public Product(ProductCreate dto, Set<Category> categories) {
+        this.name = dto.getName();
+        this.photoUrl = dto.getPhotoUrl();
+        this.description = dto.getDescription();
+        this.stock = dto.getStock();
+        this.price = dto.getPrice();
+        this.categories = categories != null ? categories : new HashSet<>();
     }
 
-    public Product(ProductReq productReq) {
-        this.name = productReq.getName();
-        this.photoUrl = productReq.getPhotoUrl();
-        this.description = productReq.getDescription();
-        this.stock = productReq.getStock();
-        this.price = productReq.getPrice();
-        this.categories = new HashSet<>();
-    }
-
-    public Product() {
-        this.categories = new HashSet<>();
-    }
-
-    @Override
-    public String toString() {
-        return "Product [categories=" + categories + ", description=" + description + ", id=" + id + ", name=" + name
-                + ", photoUrl=" + photoUrl + ", price=" + price + ", stock=" + stock + "]";
+    public void addStock(Integer stock) {
+        this.stock += stock;
     }
 }

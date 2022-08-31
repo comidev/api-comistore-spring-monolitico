@@ -8,6 +8,7 @@ import static org.mockito.Mockito.when;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -17,24 +18,24 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.HttpStatus;
 
 import comidev.comistore.components.category.Category;
-import comidev.comistore.components.category.CategoryRepo;
-import comidev.comistore.components.product.dto.ProductReq;
-import comidev.comistore.components.product.dto.ProductRes;
-import comidev.comistore.components.product.dto.ProductSearch;
+import comidev.comistore.components.category.CategoryService;
+import comidev.comistore.components.category.request.CategoryCreate;
+import comidev.comistore.components.product.request.ProductCreate;
+import comidev.comistore.components.product.response.ProductDetails;
+import comidev.comistore.components.product.util.ProductSearch;
 import comidev.comistore.exceptions.HttpException;
 
 @ExtendWith(MockitoExtension.class)
 public class ProductServiceTest {
-
     private ProductService productService;
     @Mock
     private ProductRepo productRepo;
     @Mock
-    private CategoryRepo categoryRepo;
+    private CategoryService categoryService;
 
     @BeforeEach
     void beforeEach() {
-        this.productService = new ProductService(productRepo, categoryRepo);
+        this.productService = new ProductService(productRepo, categoryService);
     }
 
     @Test
@@ -44,19 +45,19 @@ public class ProductServiceTest {
         String namePart = "ducto interes";
         String categoryName = "Categoria extensa";
         ProductSearch productSearch = new ProductSearch(namePart, categoryName);
-        Category category = new Category(categoryName);
-        Product productNew = new Product(name, "xd", "xd", 1, 1f);
-        productNew.getCategories().add(category);
-        when(categoryRepo.findByName(categoryName)).thenReturn(Optional.of(category));
+        Category category = new Category(new CategoryCreate(categoryName));
+        Product productNew = new Product(new ProductCreate(name, "xd",
+                "xd", 1, 1f, null), Set.of(category));
+        when(categoryService.findCategoryByName(categoryName)).thenReturn(category);
         when(productRepo.findAll()).thenReturn(List.of(productNew));
 
         // Actuar
-        List<ProductRes> productRes = productService.findAllOrFields(productSearch);
+        List<ProductDetails> productRes = productService.getAllProductsOrFields(productSearch);
 
         // Afirmar
         assertTrue(productRes.get(0).getName().contains(namePart));
         verify(productRepo).findAll();
-        verify(categoryRepo).findByName(categoryName);
+        verify(categoryService).findCategoryByName(categoryName);
     }
 
     @Test
@@ -68,26 +69,10 @@ public class ProductServiceTest {
 
         // Afirmar
         HttpStatus status = assertThrows(HttpException.class, () -> {
-            productService.findById(id);
+            productService.getProductById(id);
         }).getStatus();
 
         assertEquals(HttpStatus.NOT_FOUND, status);
         verify(productRepo).findById(id);
-    }
-
-    @Test
-    void PuedeLanzarErrorSiNoEncuentraCategoria_save() {
-        // Arreglar
-        String category = "Categoria mas extensa";
-        ProductReq productReq = new ProductReq("x", "x", "x", 1, 1f, List.of(category));
-        when(categoryRepo.findByName(category)).thenReturn(Optional.empty());
-        // Actuar
-
-        // Afirmar
-        HttpStatus status = assertThrows(HttpException.class, () -> {
-            productService.save(productReq);
-        }).getStatus();
-
-        assertEquals(HttpStatus.NOT_FOUND, status);
     }
 }

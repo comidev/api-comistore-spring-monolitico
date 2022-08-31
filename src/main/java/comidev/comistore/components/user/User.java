@@ -14,17 +14,23 @@ import javax.persistence.ManyToMany;
 import javax.persistence.Table;
 
 import comidev.comistore.components.role.Role;
+import comidev.comistore.components.user.request.UserCreate;
+import comidev.comistore.components.user.request.UserUpdate;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
+import lombok.EqualsAndHashCode;
 import lombok.Getter;
+import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 @Setter
 @Getter
 @Builder
-@AllArgsConstructor
 @Entity
 @Table(name = "users")
+@NoArgsConstructor
+@AllArgsConstructor
+@EqualsAndHashCode
 public class User {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -37,43 +43,21 @@ public class User {
     private String password;
 
     @ManyToMany()
-    @JoinTable(name = "user_role", joinColumns = @JoinColumn(referencedColumnName = "id", name = "user_id"), inverseJoinColumns = @JoinColumn(referencedColumnName = "id", name = "role_id"))
+    @JoinTable(name = "user_role", joinColumns = {
+            @JoinColumn(referencedColumnName = "id", name = "user_id")
+    }, inverseJoinColumns = {
+            @JoinColumn(referencedColumnName = "id", name = "role_id")
+    })
     private Set<Role> roles;
 
-    public User(String username, String password) {
-        this.username = username;
-        this.password = password;
-        this.roles = new HashSet<>();
+    public User(UserCreate dto, Set<Role> roles) {
+        this.username = dto.getUsername();
+        this.password = dto.getPassword();
+        this.roles = roles != null ? roles : new HashSet<>();
     }
 
-    public User() {
-        this.roles = new HashSet<>();
-    }
-
-    @Override
-    public boolean equals(Object obj) {
-        if (this == obj)
-            return true;
-        if (obj == null)
-            return false;
-        if (getClass() != obj.getClass())
-            return false;
-        User other = (User) obj;
-        if (id == null) {
-            if (other.id != null)
-                return false;
-        } else if (!id.equals(other.id))
-            return false;
-        if (password == null) {
-            if (other.password != null)
-                return false;
-        } else if (!password.equals(other.password))
-            return false;
-        if (username == null) {
-            if (other.username != null)
-                return false;
-        } else if (!username.equals(other.username))
-            return false;
-        return true;
+    public void update(UserUpdate dto) {
+        this.username = dto.getUsername();
+        this.password = dto.getNewPassword();
     }
 }

@@ -19,7 +19,8 @@ public class ProductRepoTest {
     void PuedeBuscarPorElContenidoDelNombre_findByNameContaining() {
         String name = "name";
         String namePart = "nam";
-        productRepo.save(new Product(name, "photoUrl", "description", 1, 1f));
+        productRepo.save(new Product(null, name, "photoUrl",
+                "description", 1, 1f, null));
 
         List<Product> productsDB = productRepo.findByNameContaining(namePart);
 

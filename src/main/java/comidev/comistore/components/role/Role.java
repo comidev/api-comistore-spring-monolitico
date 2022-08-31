@@ -8,13 +8,16 @@ import javax.persistence.Id;
 import javax.persistence.Table;
 
 import comidev.comistore.components.role.Role;
+import comidev.comistore.components.role.util.RoleName;
 import lombok.Getter;
+import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 @Setter
 @Getter
 @Entity
 @Table(name = "roles")
+@NoArgsConstructor
 public class Role {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -24,9 +27,5 @@ public class Role {
 
     public Role(RoleName name) {
         this.name = name;
-    }
-
-    public Role() {
-
     }
 }

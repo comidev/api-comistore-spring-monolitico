@@ -22,7 +22,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import comidev.comistore.exceptions.ErrorMessage;
-import comidev.comistore.exceptions.HandleException;
+import comidev.comistore.exceptions.HttpExceptionHandler;
 import comidev.comistore.exceptions.HttpException;
 import comidev.comistore.services.jwt.JwtService;
 import comidev.comistore.services.jwt.Payload;
@@ -35,7 +35,8 @@ public class JwtFilter extends OncePerRequestFilter {
     }
 
     @Override
-    protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain chain)
+    protected void doFilterInternal(HttpServletRequest request,
+            HttpServletResponse response, FilterChain chain)
             throws ServletException, IOException {
 
         String bearerToken = request.getHeader(HttpHeaders.AUTHORIZATION);
@@ -72,7 +73,7 @@ public class JwtFilter extends OncePerRequestFilter {
             new ObjectMapper().writeValue(response.getOutputStream(), body);
 
         } catch (Exception e) {
-            HttpStatus status = HandleException.statusByException(e);
+            HttpStatus status = HttpExceptionHandler.statusByException(e);
             ErrorMessage body = new ErrorMessage(status, e.getMessage(), request);
 
             response.setStatus(status.value());

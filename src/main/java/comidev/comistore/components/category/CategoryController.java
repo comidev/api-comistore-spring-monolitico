@@ -2,34 +2,39 @@ package comidev.comistore.components.category;
 
 import java.util.List;
 
-import org.springframework.http.ResponseEntity;
+import javax.validation.Valid;
+
+import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.ResponseBody;
+import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
+import comidev.comistore.components.category.doc.CategoryDoc;
+import comidev.comistore.components.category.request.CategoryCreate;
+import comidev.comistore.components.category.response.CategoryDetails;
 import lombok.AllArgsConstructor;
-
-import io.swagger.v3.oas.annotations.Operation;
-import io.swagger.v3.oas.annotations.responses.ApiResponse;
-import io.swagger.v3.oas.annotations.media.Content;
-import io.swagger.v3.oas.annotations.media.Schema;
 
 @RestController
 @RequestMapping("/categories")
 @AllArgsConstructor
-public class CategoryController {
-    private final CategoryRepo categoryRepo;
+public class CategoryController implements CategoryDoc {
+    private final CategoryService service;
 
-    @Operation(summary = "findAll - Devuelve lista de categorias", responses = {
-            @ApiResponse(description = "OK", responseCode = "200", content = @Content(mediaType = "application/json", schema = @Schema(implementation = Category.class))),
-            @ApiResponse(responseCode = "204", description = "NO CONTENT- No hay categorias", content = @Content),
-    })
     @GetMapping
-    public ResponseEntity<List<Category>> findAll() {
-        List<Category> categories = categoryRepo.findAll();
+    @ResponseBody
+    public List<CategoryDetails> getAllCategories() {
+        return service.getAllCategories();
+    }
 
-        return ResponseEntity
-                .status(categories.isEmpty() ? 204 : 200)
-                .body(categories);
+    @PostMapping
+    @ResponseStatus(HttpStatus.CREATED)
+    @ResponseBody
+    public CategoryDetails registerCategory(
+            @Valid @RequestBody CategoryCreate body) {
+        return service.registerCategory(body);
     }
 }
